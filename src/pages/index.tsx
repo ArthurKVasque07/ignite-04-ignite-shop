@@ -1,15 +1,18 @@
+import { MouseEvent, useEffect, useState } from "react";
 import { HomeContainer, Product } from "@/styles/pages/home";
 
 import { useKeenSlider } from 'keen-slider/react';
 
 import Image from "next/image";
-
+import { IProduct } from "../contexts/CartContext";
 import 'keen-slider/keen-slider.min.css'
 import { stripe } from "@/lib/stripe";
 import { GetStaticProps } from "next";
 import Stripe from "stripe";
 import Link from "next/link";
 import Head from "next/head";
+import { CartButton } from "@/components/CartButton";
+import { useCart } from "@/hooks/useCart";
 
 interface HomeProps {
   products: {
@@ -17,16 +20,29 @@ interface HomeProps {
     name: string;
     imageUrl: string;
     price: string;
+    numberPrice: number;
+    description: string;
+    defaultPriceId: string;
   }[]
 }
 
 export default function Home({ products }: HomeProps) {
+  const { addToCart, checkIfItemAlreadyExists } = useCart();
+
   const [sliderRef] = useKeenSlider({
     slides: {
       perView: 3,
       spacing: 48
     }
   })
+
+  function handleAddToCart(
+    e: MouseEvent<HTMLButtonElement>,
+    product: IProduct
+  ) {
+    e.preventDefault();
+    addToCart(product);
+  }
   return (
     <>
       <Head>
@@ -42,6 +58,12 @@ export default function Home({ products }: HomeProps) {
                 <footer>
                   <strong>{product.name}</strong>
                   <span>{product.price}</span>
+                  <CartButton
+                    size="large"
+                    color="green"
+                    disabled={checkIfItemAlreadyExists(product.id)}
+                    onClick={(e) => handleAddToCart(e, product)}
+                  />
                 </footer>
               </Product> 
             </Link>
@@ -69,7 +91,9 @@ export const getStaticProps: GetStaticProps = async () => {
       price: new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
-      }).format(price.unit_amount ? price.unit_amount / 100 : 0)
+      }).format(price.unit_amount ? price.unit_amount / 100 : 0),
+      numberPrice: price.unit_amount / 100,
+      defaultPriceId: price.id,
     }
   })
 
